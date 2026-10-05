@@ -1,0 +1,95 @@
+/* Twin Lab operator overrides — twinlab.css (original design) is NEVER touched.
+   These rules only cover NEW operator elements (toolbar, inline buttons)
+   using the same tokens so the mission-control look stays identical. */
+
+.opcol{flex:1;min-width:0;display:flex;flex-direction:column}
+.opcol main{flex:1;min-width:0}
+
+.opbar{
+  margin:16px 16px 0 18px;
+  background:var(--cd);
+  border:1px solid var(--bd);
+  border-radius:4px;
+  padding:10px 14px;
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  font-size:12px;
+}
+.opbar .lbl{font-size:10.5px;letter-spacing:1.2px;color:#a9b3bc}
+.opbar select{
+  background:#0d1318;color:#fff;border:1px solid #2c353e;border-radius:3px;
+  height:34px;padding:0 10px;font-size:12px;font-family:inherit;
+}
+.opbar .phase{font-size:11px;color:#8c97a1;letter-spacing:.4px}
+.opbar .ai{font-size:11px;color:#9ec5ef;line-height:1.5;flex-basis:100%}
+.opbar .ai b{color:#4da3ff;font-weight:500;margin-right:8px}
+.operr{
+  margin:16px 16px 0 18px;padding:10px 14px;font-size:12px;color:#f0343b;
+  background:#120a0c;border:1px solid #d5262d;border-radius:4px;
+}
+
+/* Inline (toolbar/dialog) buttons: original .btn.w/.btn.o are absolutely
+   positioned for their cards — this variant flows naturally instead. */
+.btn-inline{
+  position:static !important;left:auto !important;right:auto !important;top:auto !important;
+  width:auto !important;height:34px !important;padding:0 16px !important;
+  flex:none;display:inline-flex !important;
+}
+
+/* ---- AI Insight slide-over (overlay: never shifts the dashboard grid) ---- */
+.aip-root{position:fixed;inset:0;z-index:80;pointer-events:none}
+.aip-veil{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .2s}
+.aip-panel{
+  position:absolute;top:72px;bottom:0;right:0;width:384px;max-width:100%;
+  background:var(--cd);border-left:1px solid var(--bd);
+  transform:translateX(102%);transition:transform .22s ease-out;
+  padding:20px 20px 28px;overflow-y:auto;
+  font-variant-numeric:tabular-nums;
+}
+.aip-root.on{pointer-events:auto}
+.aip-root.on .aip-veil{opacity:1}
+.aip-root.on .aip-panel{transform:translateX(0)}
+.aip-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+.aip-title{font-size:16px;color:#fff;letter-spacing:-.2px;font-weight:500}
+.aip-sub{font-size:10.5px;color:#8c97a1;margin-top:4px;letter-spacing:.2px}
+.aip-x{background:none;border:0;color:#8c97a1;font-size:14px;cursor:pointer;padding:4px 6px}
+.aip-x:hover{color:#fff}
+.aip-badge{display:inline-block;font-size:10px;color:#9ec5ef;border:1px solid #22384f;border-radius:3px;padding:3px 8px;margin:10px 0 0}
+/* hero: fault name + severity with real breathing room */
+.aip-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:14px 0 2px}
+.aip-fault{font-size:19px;color:#fff;letter-spacing:-.3px;line-height:1.25;font-weight:500}
+.aip-sev{flex:none;margin-top:3px;font-size:10px;letter-spacing:.8px;color:#f0343b;border:1px solid #d5262d;border-radius:2px;padding:3px 9px;background:#120a0c}
+.aip-lede{font-size:13px;line-height:1.6;color:#d3d9de;margin:8px 0 0}
+/* metric delta grid in the dashboard card language */
+.aip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 2px}
+.aip-cell{background:#070a0f;border:1px solid #141b22;border-radius:3px;padding:8px 11px 7px}
+.aip-cell-l{display:block;font-size:9.5px;letter-spacing:1.1px;color:#8c97a1;margin-bottom:3px}
+.aip-cell-v{display:block;font-size:12.5px;color:#fff}
+.aip-cell-d{display:block;font-size:11px;margin-top:2px}
+.aip-cell-d.bad{color:#f0444b}.aip-cell-d.ok{color:#2fd16f}
+/* sections */
+.aip-sec{margin-top:16px;padding-top:13px;border-top:1px solid #12181f}
+.aip-sech{display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:1.4px;color:#7d8892;margin-bottom:9px;text-transform:uppercase}
+.aip-sech em{font-style:normal;letter-spacing:0;width:20px;height:20px;border-radius:50%;background:#0d1318;border:1px solid #1a232c;display:grid;place-items:center;font-size:9.5px;color:#c6cfd6;flex:none}
+.aip-secb{font-size:12.5px;color:#d3d9de;line-height:1.6}
+.aip-secb p{margin:0 0 9px}.aip-secb b{color:#fff;font-weight:500}
+.aip-dim{color:#8c97a1;font-size:11.5px;line-height:1.6}
+.aip-err{color:#f0343b}
+/* vertical cascade stepper */
+.aip-vchain{display:flex;flex-direction:column;margin:2px 0 10px}
+.aip-vstep{display:flex;flex-direction:column;align-items:stretch}
+.aip-varrow{color:#5b6670;font-size:13px;line-height:1;padding:5px 0 5px 22px}
+.aip-vnode{display:flex;align-items:baseline;gap:10px;background:#070a0f;border:1px solid #141b22;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#e8edf1}
+.aip-vnode b{margin-left:auto;font-weight:400;color:#f0444b;font-size:11.5px;white-space:nowrap}
+/* recommendations + avoid callout */
+.aip-recs{margin:0 0 10px;padding:0;list-style:none;counter-reset:aip}
+.aip-recs li{position:relative;font-size:12.5px;color:#d3d9de;line-height:1.55;padding-left:30px;margin-bottom:8px;counter-increment:aip}
+.aip-recs li::before{content:counter(aip,decimal-leading-zero);position:absolute;left:0;top:2px;font-size:10px;color:#8c97a1}
+.aip-avoid{font-size:11.5px;line-height:1.6;color:#9ec5ef;background:#070d13;border:1px solid #1b2c3d;border-left:2px solid #4da3ff;border-radius:3px;padding:8px 11px;margin:0 0 10px}
+.aip-avoid b{color:#cfe3f8;font-weight:500}
+.aip-steps{display:grid;gap:6px;font-size:11px;color:#8c97a1;margin-bottom:10px}
+.aip-steps span::before{content:"▸ ";color:#4da3ff}
+.aip-skel{display:grid;gap:8px}
+.aip-skel i{display:block;height:11px;border-radius:2px;background:#0d1318;border:1px solid #10171d}
+.aip-skel i:nth-child(2){width:82%}.aip-skel i:nth-child(3){width:64%}.aip-skel i:nth-child(4){width:74%}
+.aip-panel .btn-inline{margin-top:6px}
+@media(max-width:820px){.aip-panel{top:0;width:100%;border-left:0}}
