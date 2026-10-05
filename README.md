@@ -1,75 +1,130 @@
-# Orbitwin — Mission Digital Twin (Twin Lab MVP)
+# ORBITWIN
 
-*Break the twin, spare the spacecraft.*
+### *Break the twin, spare the spacecraft.*
 
-Deterministic satellite failure-rehearsal lab. **UI preserved exactly** from `satellite-dashboard-v3.html` — CSS copied verbatim to `frontend/src/styles/twinlab.css` (verified identical, 23212 chars).
+![deterministic](https://img.shields.io/badge/simulation-deterministic-2fd16f?style=flat-square)
+![offline](https://img.shields.io/badge/runs-100%25%20offline-4da3ff?style=flat-square)
+![faults](https://img.shields.io/badge/faults-7%20live-f5a524?style=flat-square)
+![tests](https://img.shields.io/badge/tests-9%20passing-2fd16f?style=flat-square)
+![stack](https://img.shields.io/badge/FastAPI%20%C2%B7%20React%20%C2%B7%20SQLite-mission%20control-0b131a?style=flat-square)
 
-`CREATE → INJECT → SIMULATE → DETECT → DIAGNOSE → RECOMMEND → RECOVER → RECORD`
+**Orbitwin (Twin Lab MVP)** is a mission-grade satellite digital twin for **ST-09 · Predictive Fault Simulation**. A living software model of ORBITER-01, kept in step with simulated telemetry — so operators can ask *"what if"* without ever touching the spacecraft.
 
-## Stack
-- Frontend: React + Vite + TypeScript (`frontend/`), same dark mission-control CSS, dynamic SVG telemetry
-- Backend: FastAPI + SQLModel + SQLite (`backend/`), WebSocket live ticks
-- AI (optional): Gemini explainer, backend-only key, deterministic fallback offline
+The value is in the **links between subsystems**: a degrading battery drags down bus voltage, which forces heaters on, which cooks the thermal loop, which degrades comms. This is not a dashboard that shows each subsystem separately. **This is a twin.**
 
-## Run
-Backend:
-```powershell
-cd C:\Users\Captain\Desktop\MVP
-python -m venv .venv; .\.venv\Scripts\Activate.ps1
-python -m pip install -r backend/requirements.txt
-uvicorn app.main:app --reload --app-dir backend
-# → http://localhost:8000, docs at /docs
 ```
-Frontend:
+INJECT  →  SIMULATE  →  DETECT  →  DIAGNOSE  →  PREDICT  →  RECOVER  →  REPLAY  →  RECORD
+```
+
+---
+
+## The 2-minute demo (this wins hackathons)
+
+> 1. **(0:00)** Open Orbitwin. All green, Health 78%, telemetry *breathing*. "ORBITER-01, live."
+> 2. **(0:20)** Select **Battery Degradation** → **INJECT FAULT**. "A real backend incident — not a video."
+> 3. **(0:25–1:00)** Hands off. Narrate the order: *"Battery falls first… voltage follows… heaters kick in… temperature climbs… comms degrades last. That order IS the EPS → TCS → COMMS physics."*
+> 4. **(1:00)** "Detected. Chain traced. Severity HIGH. Temp critical in ~4 sim-minutes without action." Open the **AI Insight panel** — what broke, why, the chain, the fix.
+> 5. **(1:20)** **APPLY RECOVERY.** "Watch it save itself — 61 back to 73."
+> 6. **(1:50)** Reports → **Replay**: *"That exact failure, replayed from recorded telemetry."* → Open report → Print to PDF. *"Every number traceable. Thank you."*
+
+Don't believe it's live? Inject a *different* fault. The cascade, diagnosis, RUL and recovery all change — a recording can't do that.
+
+---
+
+## Live pipeline (nothing is pre-played)
+
+```mermaid
+flowchart LR
+    S[01 Satellite Simulator<br/>seeded noise + gaps] --> F[02 Fault Injector<br/>7 faults, 1 active]
+    F --> T[telemetry ticks<br/>WebSocket, 0.9s]
+    T --> D[03 Anomaly Detector<br/>per-signal bands]
+    D --> R[04 Root-Cause Engine<br/>deterministic rules]
+    R --> A[05 Recovery Advisor<br/>SAFE-gated actions]
+    R --> AI[AI Narrator<br/>Gemini, grounded]
+    A --> M[06 Mission Dashboard<br/>health + charts + timeline]
+    T -. persisted .-> DB[(SQLite)]
+    DB -. replay .-> M
+```
+
+Every pixel change on screen is a WebSocket tick from the backend, persisted to SQLite. **Replay** re-renders any incident frame-by-frame from stored telemetry. Incident IDs, timestamps and report contents always match what just happened.
+
+---
+
+## Fault catalog — every one cascades across 3+ subsystems
+
+| Fault | Severity | Cascade | Aftermath |
+|---|---|---|---|
+| Battery Degradation | HIGH | Battery → Voltage → Heaters → Temp → Comms | 64→42% SoC, 32→58°C, 87→62% signal |
+| Power Bus Failure | CRITICAL | Bus → Power → Battery → Thermal → Comms | power 78→41% |
+| Solar Power Drop | MEDIUM | Solar → Charging → SoC → Power → Payload | solar 52→22 W |
+| Thermal Runaway | CRITICAL | Temp → Protection → Payload → Comms → Safe-mode | temp 32→71°C |
+| Communication Loss | HIGH | Signal → Packets → Data rate → Visibility | signal 87→12%, flagged *visibility lost — craft may be healthy* |
+| Attitude Drift | HIGH | Attitude → Pointing → Solar → Signal → Battery | solar 52→28 W |
+| Sensor Failure | HIGH | Sensors → Attitude → Solar → Power → Comms | Sensors CRITICAL |
+
+One active fault at a time (`409 Resolve the active incident…` otherwise — it's a real state machine). Same input → same output, always. Idle stream breathes with seeded sub-1% noise.
+
+---
+
+## Quickstart — from zero to breaking things in 3 minutes
+
+**Backend:**
+```powershell
+python -m pip install -r backend/requirements.txt
+uvicorn app.main:app --app-dir backend
+# → http://localhost:8000 · interactive docs at /docs
+```
+
+**Frontend:**
 ```powershell
 cd frontend; npm install; npm run dev
-# → http://localhost:5173 (proxies /api → :8000, WS → ws://host:8000/ws/simulation)
+# → http://localhost:5173 (API proxied, WS → ws://host:8000/ws/simulation)
 ```
+
+**Tests:** `python -m pytest backend/tests -v` — determinism, recovery, noise bounds, RUL, invalid-fault rejection.
+
+**AI Narrator (optional, offline-first):** create `backend/.env` with `GEMINI_API_KEY=` (or paste it in Settings → saved server-side only). Without a key the deterministic diagnosis renders anyway — the demo *never* needs the internet.
+
+---
 
 ## API
-- `GET /api/mission /api/state /api/faults /api/telemetry /api/events /api/incidents /api/analysis /api/settings`
-- `POST /api/faults/inject {"fault_type":"battery_degradation"}`
-- `POST /api/incidents/{id}/recover`, `GET /api/incidents/{id}`, `GET /api/incidents/{id}/report` (printable HTML → PDF via browser)
-- `POST /api/incidents/{id}/explain`, `POST /api/settings/ai-key`, `POST /api/reset`
-- `WS /ws/simulation` — ticks `INJECTED→…→RECOMMENDATION_READY`, then `recovery_tick→recovered`
 
-## Faults (deterministic + seeded noise)
-`battery_degradation HIGH (64→42%, 32→58°C, 87→62%, health 78→61)`, `power_bus CRITICAL`, `solar_drop MEDIUM`, `thermal_runaway CRITICAL`, `comm_loss HIGH` (flags telemetry-unreliable, craft≠failed), `attitude_drift HIGH`, `sensor_failure HIGH` (Sensors→Attitude→Solar→Power→Comms). Same input → same output (9 pytest checks). One active fault at a time (409 otherwise). Idle stream breathes with seeded ±0.4 noise; RUL projects Battery SoC→20% / Temp→75°C at observed slope.
+| | |
+|---|---|
+| `GET /api/mission /api/state /api/faults /api/telemetry /api/events /api/incidents /api/analysis` | live twin state |
+| `POST /api/faults/inject {"fault_type":"battery_degradation"}` | **break it** → `INC-2026-xxxx`, `SIMULATING` |
+| `POST /api/incidents/{id}/recover` | **save it** — recovery ticks stream back |
+| `GET /api/incidents/{id}/report` | printable incident report → PDF |
+| `POST /api/incidents/{id}/explain` | AI diagnosis (cached per incident) |
+| `POST /api/reset` | back to nominal, history preserved |
+| `WS /ws/simulation` | `INJECTED → … → RECOMMENDATION_READY`, then recovery ticks |
 
-## AI setup (optional)
-Create `backend/.env` (never commit, never paste in chat):
+---
+
+## Why judges should care
+
+- **Beats the trap.** The failure mode of this problem statement is *an isolated dashboard with no cause-and-effect*. Ours is all cause-and-effect: delete the coupling tables and there is no product.
+- **Fidelity, honestly framed.** Bounded LEO EPS/TCS magnitudes, seeded noise, out-of-envelope values flag instead of rendering silently, RUL projected at observed slope in honest sim-minutes.
+- **Explainable by design.** Deterministic core, no API key required. Gemini is a *narrator*, grounded strictly on real deltas — never the source of truth.
+- **Traceable.** Incident ID → event log → telemetry frames → replay → report. One thread, end to end.
+
+**Judge Q&A, answered in the repo:**
+- *Which three subsystems, what connects them?* — EPS→TCS→COMMS coupling rules (SoC→voltage→heaters→temp→comms amps), ADCS/Sensors in attitude/sensor faults.
+- *Synced twin or pretty simulation?* — Synchronized; Replay proves it.
+- *How checked believable?* — 9 automated checks + envelope-bounded magnitudes.
+
+---
+
+## Roadmap — from demo to real program
+
+> Tonight: deterministic twin. Next: TimescaleDB + SimPy/OpenModelica physics, Basilisk dynamics, NASA battery-ageing datasets to calibrate RUL, Kalman state estimation, 3D view.
+
 ```
-GEMINI_API_KEY=<fresh key from AI Studio>
-GEMINI_MODEL=gemini-2.0-flash
-AI_ENABLED=true
+project
+├── frontend/  React + Vite + TS · original mission-control CSS, verbatim
+│   └── src/{components,pages,hooks,services,types,data,styles}
+└── backend/   FastAPI + SQLModel + SQLite · WebSocket ticks
+    └── app/{simulation,faults,ai,reports,api,database}
 ```
-Or Settings page → password input → saved server-side only. UI shows `AI: Configured` + auto `AI Insight` under Failure Analysis after each fault; fallback text if no key/quota/offline.
 
-## Demo (hackathon)
-1. Open frontend — Health 78%, all NOMINAL
-2. Fault Injection → select Battery Degradation → INJECT FAULT
-3. Watch Live/ring/chart/subsystems change over ~6s + FAULT DETECTED → ROOT CAUSE
-4. Failure Analysis shows chain + HIGH + AI summary → Explain with AI if needed
-5. APPLY RECOVERY → watch recover to ~73% → STABLE toast
-6. Event Log shows full chain, Reports → Open INC-2026-0001 → Print to PDF, Reset to baseline
-
-## Tests
-`python -m pytest backend/tests -v` — 7 faults deterministic, recovery improves, noise bounded + deterministic, RUL sane, invalid fault rejected.
-
-## 2-minute demo script (say this)
-1. (0:00) "ORBITER-01, all green, live telemetry — Health 78%." Point at breathing numbers.
-2. (0:20) "I'll inject Battery Degradation — a real backend incident, not a video." Click INJECT FAULT.
-3. (0:25–1:00) Hands off. Narrate the order: "Battery falls first… voltage follows… heaters kick in… temperature climbs… comms degrades last. That order IS the EPS→TCS→COMMS physics."
-4. (1:00) "System detected it, traced the chain, rated HIGH, and projects Temp critical in ~4 sim-minutes without action. AI summary on top."
-5. (1:20) Click APPLY RECOVERY. "Watch it save itself — 61 back to 73."
-6. (1:50) Reports → Replay: "That exact failure, replayed from recorded telemetry." → Open report → Print to PDF. "Every number traceable. Thank you."
-
-## Judge Q&A cheat sheet
-- **Which 3 subsystems, what connects them?** "EPS→TCS→COMMS: battery SoC drives bus voltage; low voltage forces heaters on; heat degrades comms amplifiers. Linearized coupling rules, deterministic — same fault, same cascade, every run. ADCS/Sensors join in attitude and sensor faults."
-- **Walk me through battery degradation.** "SoC 64→42, voltage 100→82, heaters +6°C, temp 32→58, signal 87→62. Watch the chain row — order never changes because the coupling does."
-- **Synced twin or pretty simulation?** "Synchronized: every pixel is a WebSocket tick persisted to SQLite. Replay in Reports re-renders the same incident from stored frames — a recording couldn't do that with a different fault."
-- **How checked believable?** "Bounded magnitudes inside LEO EPS/TCS envelopes, seeded sub-1% noise, out-of-envelope values flag instead of rendering silently, 9 automated checks including determinism."
-- **Why no AI key / offline?** "Deterministic core is the product — explainable with no API key. Gemini is an optional narrator, grounded strictly on real deltas, and the demo runs 100% offline."
-
-## Roadmap (say one sentence on stage)
-"Tonight: deterministic twin. Next: TimescaleDB + SimPy/OpenModelica physics, Basilisk dynamics, NASA battery-ageing data to calibrate RUL, Kalman state estimation, 3D view."
+Built the night before the hackathon. Flown like it was always meant to fly.
