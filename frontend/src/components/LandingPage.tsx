@@ -46,17 +46,18 @@ export function LandingPage({ onLogin }: { onLogin: () => void }) {
         if (boot && !boot.classList.contains("x") && Date.now() - born > 2500) {
           boot.classList.add("x");
         }
-        // "Get Started" points at #contact — reroute it to start login instead
+        // Hero CTAs enter the mission directly (no login wall on the main path).
+        // The floating Scientist Login button stays as the optional gated entry.
         if (!hooked) {
           const form = doc.getElementById("slForm") as HTMLFormElement | null;
-          const opener = doc.getElementById("slOpen") as HTMLButtonElement | null;
-          if (form && opener) {
+          if (form) {
             hooked = true;
-            doc.querySelectorAll('a[aria-label="Get Started"]').forEach((a) => {
-              a.addEventListener("click", (e) => {
-                e.preventDefault();
-                opener.click();
-              });
+            const enter = (e: Event) => {
+              e.preventDefault();
+              finish(400);
+            };
+            doc.querySelectorAll('a[aria-label="Get Started"], a[aria-label="Explore the Mission"], a.b1[href="#solution"]').forEach((a) => {
+              a.addEventListener("click", enter);
             });
             form.addEventListener("submit", () => {
               const u = (doc.getElementById("slUser") as HTMLInputElement | null)?.value.trim() ?? "";
