@@ -29,6 +29,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def utf8_json(request, call_next):
+    """Guarantee explicit UTF-8 on JSON so ↓/↑/°C always decode correctly."""
+    resp = await call_next(request)
+    ct = resp.headers.get("content-type", "")
+    if ct == "application/json":
+        resp.headers["content-type"] = "application/json; charset=utf-8"
+    return resp
+
 # runtime state (single active fault for MVP)
 state = {
     "current": dict(BASELINE),
