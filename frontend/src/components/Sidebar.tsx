@@ -1,4 +1,4 @@
-export type View = "home" | "fault" | "telemetry" | "events" | "reports" | "settings";
+export type View = "landing" | "connect" | "overview" | "home" | "fault" | "telemetry" | "events" | "reports" | "settings";
 
 const ITEMS: { id: View; label: string; icon: string }[] = [
   { id: "home", label: "Home", icon: "M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5" },

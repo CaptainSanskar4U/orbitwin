@@ -9,12 +9,23 @@ import { LiveState } from "./components/LiveState";
 import { TelemetryChart } from "./components/TelemetryChart";
 import { FailureAnalysis } from "./components/FailureAnalysis";
 import { AIInsightPanel } from "./components/AIInsightPanel";
+import { ConnectSatellite } from "./components/ConnectSatellite";
+import { SatelliteOverview } from "./components/SatelliteOverview";
 import { useTwinLab } from "./hooks/useTwinLab";
 import { api } from "./services/api";
 
+function initialView(): View {
+  try {
+    const q = new URLSearchParams(window.location.search).get("view");
+    if (q === "fault" || q === "home" || q === "telemetry" || q === "events" || q === "reports" || q === "settings") return q;
+    if (window.sessionStorage.getItem("orbitwin_onboarded") === "1") return "fault";
+  } catch { /* fresh onboarding on any error */ }
+  return "connect";
+}
+
 export default function App() {
   const t = useTwinLab();
-  const [view, setView] = useState<View>("fault");
+  const [view, setView] = useState<View>(initialView);
   const [faults, setFaults] = useState<any[]>([]);
   const [sel, setSel] = useState("battery_degradation");
   const [busy, setBusy] = useState(false);
@@ -111,9 +122,30 @@ export default function App() {
   const a = t.analysis;
   const before = a.before, after = a.after;
 
+  // Onboarding flow: Popup (connect) -> Satellite Overview -> main dashboard.
+  // Rendered full-screen without dashboard chrome; hooks above stay mounted
+  // so telemetry/WS is already warm when the user clones into the twin.
+  if (view === "connect") {
+    return <ConnectSatellite onConnect={() => setView("overview")} />;
+  }
+  if (view === "overview") {
+    return (
+      <SatelliteOverview
+        onClone={() => {
+          try { window.sessionStorage.setItem("orbitwin_onboarded", "1"); } catch { /* ignore */ }
+          setView("fault");
+        }}
+      />
+    );
+  }
+
   return (
     <>
-      <Header phase={t.simulating ? t.phase : "NOMINAL"} connected={t.connected} />
+      <Header phase={t.simulating ? t.phase : "NOMINAL"} connected={t.connected} onLogoClick={() => {
+        try { window.sessionStorage.removeItem("orbitwin_onboarded"); } catch { /* ignore */ }
+        stopReplay(true);
+        setView("connect");
+      }} />
       <div className="wrap">
         <Sidebar view={view} setView={setView} />
         <div className="opcol">
