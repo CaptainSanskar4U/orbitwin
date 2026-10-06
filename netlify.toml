@@ -1,0 +1,12 @@
+# Netlify: serves the Vite frontend. Point it at the hosted API via the
+# VITE_API_URL site env var, e.g. https://orbitwin-api.onrender.com
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback so deep links always boot the twin
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

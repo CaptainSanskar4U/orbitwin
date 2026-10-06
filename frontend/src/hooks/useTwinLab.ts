@@ -43,15 +43,18 @@ export function useTwinLab() {
       const tel = await api.telemetry();
       setSeries(tel.map((t: any) => t.data));
       setErr("");
-    } catch (e: any) {
+    } catch {
       setErr("Backend unavailable — start backend: uvicorn app.main:app --app-dir backend");
     }
   };
 
   useEffect(() => {
     refresh();
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.hostname}:8000/ws/simulation`);
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
+    const wsUrl = apiBase
+      ? apiBase.replace(/^http/, "ws") + "/ws/simulation"
+      : `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:8000/ws/simulation`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);

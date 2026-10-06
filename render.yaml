@@ -1,0 +1,17 @@
+# Render: hosts the FastAPI twin API (free tier OK for demo).
+# Create via dashboard -> New -> Web Service -> use this repo.
+# NOTE: free-tier disk is ephemeral — SQLite history resets on
+# redeploy/restart. Set GEMINI_API_KEY in the Render dashboard, never here.
+services:
+  - type: web
+    name: orbitwin-api
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: AI_ENABLED
+        value: "true"

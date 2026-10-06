@@ -1,4 +1,6 @@
-const BASE = "";
+// Local dev: same-origin via Vite proxy. Hosted (Netlify -> Render):
+// build with VITE_API_URL=https://<backend> (no trailing slash).
+const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
 async function j(res: Response) {
   if (!res.ok) {
