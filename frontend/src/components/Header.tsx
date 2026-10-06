@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export function Header({ phase, connected, onLogoClick }: { phase: string; connected: boolean; onLogoClick?: () => void }) {
+export function Header({ phase, connected, onLogoClick, demo }: { phase: string; connected: boolean; onLogoClick?: () => void; demo?: boolean }) {
   const [now, setNow] = useState("");
   useEffect(() => {
     const f = () => {
@@ -24,7 +24,7 @@ export function Header({ phase, connected, onLogoClick }: { phase: string; conne
       <div className="sub">DIGITAL TWIN<i>·</i>SATELLITE OPERATIONS</div>
       <div className="hr">
         <span className="m">MISSION: <b>ORBITER-01</b></span>
-        <span className="sim"><span className="dot" style={{ background: connected ? "#2fd16f" : "#e5242b" }}></span>{phase === "NOMINAL" ? "SIMULATION ACTIVE" : phase}</span>
+        <span className="sim"><span className="dot" style={{ background: demo ? "#f5a524" : connected ? "#2fd16f" : "#e5242b" }}></span>{demo ? "DEMO MODE" : phase === "NOMINAL" ? "SIMULATION ACTIVE" : phase}</span>
         <span className="clk">{now}</span>
         <svg className="av" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#9aa4ad" strokeWidth="1.3"><circle cx="12" cy="12" r="10.5" /><circle cx="12" cy="10" r="3.2" /><path d="M5.5 19c1.6-3 4.2-3.8 6.5-3.8s4.9.8 6.5 3.8" /></svg>
       </div>

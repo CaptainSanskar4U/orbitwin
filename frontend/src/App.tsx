@@ -14,6 +14,7 @@ import { SatelliteOverview } from "./components/SatelliteOverview";
 import { LandingPage } from "./components/LandingPage";
 import { useTwinLab } from "./hooks/useTwinLab";
 import { api } from "./services/api";
+import { demoFaultList } from "./services/offline";
 
 function initialView(): View {
   try {
@@ -40,7 +41,11 @@ export default function App() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
 
-  useEffect(() => { api.faults().then(setFaults).catch(() => {}); }, []);
+  useEffect(() => {
+    if (t.mode === "demo") return;
+    api.faults().then(setFaults).catch(() => {});
+  }, [t.mode]);
+  const shownFaults = faults.length ? faults : demoFaultList();
   useEffect(() => () => window.clearInterval(replayTimer.current), []);
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") setAiOpen(false); };
@@ -56,6 +61,27 @@ export default function App() {
   };
 
   const startReplay = async (iid: string) => {
+    if (t.mode === "demo") {
+      const frames = t.demoFramesFor(iid);
+      if (!frames.length) { t.showToast("No stored frames for " + iid); return; }
+      window.clearInterval(replayTimer.current);
+      setReplayFrames(frames); setReplayIdx(0); setView("fault");
+      t.showToast(`Replaying ${iid} — ${frames.length} recorded frames`);
+      replayTimer.current = window.setInterval(() => {
+        setReplayIdx((i) => {
+          if (i + 1 >= frames.length) {
+            window.clearInterval(replayTimer.current);
+            replayTimer.current = undefined;
+            setReplayFrames(null);
+            t.refresh();
+            t.showToast("Replay complete — back to live");
+            return i;
+          }
+          return i + 1;
+        });
+      }, 650);
+      return;
+    }
     try {
       const tel = await api.telemetry();
       const frames = tel.filter((x: any) => x.incident_id === iid).map((x: any) => x.data as SimValues);
@@ -86,7 +112,7 @@ export default function App() {
     stopReplay(true);
     setBusy(true);
     try {
-      const r = await api.inject(sel);
+      const r = await t.injectFault(sel);
       t.showToast(`Fault injected: ${r.incident_id}`);
       setView("fault");
       t.refresh();
@@ -98,14 +124,14 @@ export default function App() {
   const recover = async () => {
     if (!t.analysis.incident_id) { t.showToast("No active incident"); return; }
     try {
-      await api.recover(t.analysis.incident_id);
+      await t.recoverActive();
       t.showToast("Recovery sequence started");
     } catch (e: any) { t.showToast("Recovery blocked: " + e.message); }
   };
 
   const reset = async () => {
     stopReplay(true);
-    await api.reset().catch(() => {});
+    await t.resetSim().catch(() => {});
     t.refresh();
     t.showToast("Simulation reset to baseline");
   };
@@ -115,7 +141,7 @@ export default function App() {
     setAiOpen(true);
     setAiLoading(true);
     setAiError("");
-    try { await api.explain(t.analysis.incident_id); await t.refresh(); }
+    try { await t.explainActive(); await t.refresh(); }
     catch (e: any) { setAiError("AI unavailable: " + e.message); }
     finally { setAiLoading(false); }
   };
@@ -146,7 +172,7 @@ export default function App() {
 
   return (
     <>
-      <Header phase={t.simulating ? t.phase : "NOMINAL"} connected={t.connected} onLogoClick={() => {
+      <Header phase={t.simulating ? t.phase : "NOMINAL"} connected={t.connected} demo={t.mode === "demo"} onLogoClick={() => {
         try { window.sessionStorage.removeItem("orbitwin_onboarded"); } catch { /* ignore */ }
         stopReplay(true);
         setView("landing");
@@ -158,7 +184,7 @@ export default function App() {
             <div className="opbar">
               <span className="lbl">FAULT TYPE</span>
               <select value={sel} onChange={(e) => setSel(e.target.value)}>
-                {faults.map((f) => <option key={f.id} value={f.id}>{f.label} — {f.severity}</option>)}
+                {shownFaults.map((f) => <option key={f.id} value={f.id}>{f.label} — {f.severity}</option>)}
               </select>
               <button className="btn w btn-inline" disabled={busy || t.simulating} onClick={inject}>
                 {t.simulating ? "SIMULATING…" : "INJECT FAULT"}
@@ -210,11 +236,11 @@ export default function App() {
                     <span style={{ color: "#9aa4ad" }}>{i.fault_type} · {i.severity} · {i.status}</span>
                     <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
                       <button className="btn o btn-inline" onClick={() => startReplay(i.id)}>Replay</button>
-                      <a href={api.reportUrl(i.id)} target="_blank" rel="noreferrer" style={{ color: "#4da3ff" }}>Open / Print PDF ↓</a>
+                      <a href={t.reportHref(i.id)} target="_blank" rel="noreferrer" style={{ color: "#4da3ff" }}>Open / Print PDF ↓</a>
                     </span>
                   </div>
                 ))}
-                {!t.incidents.length && <small style={{ color: "#8c97a1" }}>No incidents yet — inject a fault to create INC-2026-0001.</small>}
+                {!t.incidents.length && <small style={{ color: "#8c97a1" }}>No incidents yet — inject a fault to create your first incident.</small>}
               </div>
             </section>
           )}
@@ -223,12 +249,15 @@ export default function App() {
             <section className="card" style={{ gridColumn: "1/3", padding: 16 }}>
               <h2>Settings</h2>
               <div style={{ marginTop: 12, fontSize: 12, color: "#c9d0d6", display: "grid", gap: 10, maxWidth: 520 }}>
-                <div>Backend: <code>http://localhost:8000</code> · WS <code>/ws/simulation</code> · {t.connected ? "connected" : "disconnected"}</div>
-                <div>Simulation: deterministic, single active fault. Telemetry persists in SQLite.</div>
+                <div>Backend: {t.mode === "demo"
+                  ? <code>offline demo twin (in-browser)</code>
+                  : <><code>http://localhost:8000</code> · WS <code>/ws/simulation</code> · {t.connected ? "connected" : "disconnected"}</>}</div>
+                <div>Simulation: deterministic, single active fault. {t.mode === "demo" ? "Demo history lives in this tab only." : "Telemetry persists in SQLite."}</div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input type="password" placeholder="GEMINI_API_KEY (optional)" value={aiKey} onChange={(e) => setAiKey(e.target.value)}
                     style={{ flex: 1, background: "#0d1318", border: "1px solid #2c353e", color: "#fff", borderRadius: 3, height: 34, padding: "0 10px" }} />
                   <button className="btn o btn-inline" style={{ width: 140 }} onClick={async () => {
+                    if (t.mode === "demo") { setAiKey(""); t.showToast("AI key needs the backend link — demo uses built-in diagnosis"); return; }
                     await api.setKey(aiKey, "gemini-2.0-flash").catch(() => {});
                     setAiKey(""); t.refresh(); t.showToast("AI key saved server-side");
                   }}>Save AI key</button>
@@ -261,7 +290,7 @@ export default function App() {
                     {a.rul && <PRow label={`${a.rul.metric} RUL`} b={a.rul.trend} a={`~${a.rul.sim_min} sim-min → ${a.rul.limit}`} />}
                   </tbody>
                 </table>
-                <button className="btn o" onClick={() => { if (a.incident_id) window.open(api.reportUrl(a.incident_id), "_blank"); else t.showToast("Inject a fault first"); }}>
+                <button className="btn o" onClick={() => { if (a.incident_id) window.open(t.reportHref(a.incident_id), "_blank"); else t.showToast("Inject a fault first"); }}>
                   <svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16" /></svg>Download Incident Report</button>
               </section>
             </div>
