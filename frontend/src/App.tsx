@@ -11,6 +11,7 @@ import { FailureAnalysis } from "./components/FailureAnalysis";
 import { AIInsightPanel } from "./components/AIInsightPanel";
 import { ConnectSatellite } from "./components/ConnectSatellite";
 import { SatelliteOverview } from "./components/SatelliteOverview";
+import { LandingPage } from "./components/LandingPage";
 import { useTwinLab } from "./hooks/useTwinLab";
 import { api } from "./services/api";
 
@@ -20,7 +21,7 @@ function initialView(): View {
     if (q === "fault" || q === "home" || q === "telemetry" || q === "events" || q === "reports" || q === "settings") return q;
     if (window.sessionStorage.getItem("orbitwin_onboarded") === "1") return "fault";
   } catch { /* fresh onboarding on any error */ }
-  return "connect";
+  return "landing";
 }
 
 export default function App() {
@@ -122,9 +123,12 @@ export default function App() {
   const a = t.analysis;
   const before = a.before, after = a.after;
 
-  // Onboarding flow: Popup (connect) -> Satellite Overview -> main dashboard.
+  // Onboarding flow: landing -> connect (Popup) -> Satellite Overview -> main dashboard.
   // Rendered full-screen without dashboard chrome; hooks above stay mounted
   // so telemetry/WS is already warm when the user clones into the twin.
+  if (view === "landing") {
+    return <LandingPage onLogin={() => setView("connect")} />;
+  }
   if (view === "connect") {
     return <ConnectSatellite onConnect={() => setView("overview")} />;
   }
@@ -145,7 +149,7 @@ export default function App() {
       <Header phase={t.simulating ? t.phase : "NOMINAL"} connected={t.connected} onLogoClick={() => {
         try { window.sessionStorage.removeItem("orbitwin_onboarded"); } catch { /* ignore */ }
         stopReplay(true);
-        setView("connect");
+        setView("landing");
       }} />
       <div className="wrap">
         <Sidebar view={view} setView={setView} />

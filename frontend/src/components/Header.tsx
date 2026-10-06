@@ -16,7 +16,7 @@ export function Header({ phase, connected, onLogoClick }: { phase: string; conne
     <header>
       <div className="logo" onClick={onLogoClick} tabIndex={onLogoClick ? 0 : undefined}
         onKeyDown={onLogoClick ? (e) => { if (e.key === "Enter") onLogoClick(); } : undefined}
-        style={onLogoClick ? { cursor: "pointer" } : undefined} title={onLogoClick ? "Back to Connect Satellite" : undefined}>
+        style={onLogoClick ? { cursor: "pointer" } : undefined} title={onLogoClick ? "Back to start" : undefined}>
         <svg width="26" height="28" viewBox="0 0 26 28" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round"><path d="M13 2l10 5.5v12L13 26 3 19.5v-12z" /><path d="M13 13l10-5.5M13 13L3 7.5M13 13v13" /></svg>
         Orbitwin
       </div>
