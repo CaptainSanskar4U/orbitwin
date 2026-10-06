@@ -135,6 +135,7 @@ export default function App() {
           try { window.sessionStorage.setItem("orbitwin_onboarded", "1"); } catch { /* ignore */ }
           setView("fault");
         }}
+        live={{ v: t.values, series: t.series, subsystems: t.subsystems, analysis: t.analysis, connected: t.connected }}
       />
     );
   }
